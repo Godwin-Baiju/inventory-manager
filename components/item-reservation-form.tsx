@@ -88,7 +88,7 @@ export function ItemReservationForm({ item, userId }: ItemReservationFormProps) 
         partyContact: formData.partyContact.trim() || null,
         partyAddress: formData.partyAddress.trim() || null,
         reservedQuantity: quantity,
-        reservedUntil: reservedUntil.toISOString().split('T')[0],
+        reservedUntil: format(reservedUntil, "yyyy-MM-dd"),
         notes: formData.notes.trim() || null,
         createdBy: userId,
       })

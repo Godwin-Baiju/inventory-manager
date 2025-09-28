@@ -16,11 +16,42 @@ export default async function DashboardPage() {
   const user = data.user
 
   // Get inventory statistics
-  const { data: inventoryItems } = await supabase.from("inventory_items").select("id, stock_qty")
+  // Get total count of items
+  const { count: totalItems } = await supabase
+    .from("inventory_items")
+    .select("*", { count: 'exact', head: true })
 
-  const totalItems = inventoryItems?.length || 0
-  const totalStock = inventoryItems?.reduce((sum, item) => sum + item.stock_qty, 0) || 0
-  const lowStockItems = inventoryItems?.filter((item) => item.stock_qty <= 10).length || 0
+  // Get total stock quantity using pagination to handle large datasets
+  let totalStock = 0
+  let offset = 0
+  const batchSize = 1000
+  let hasMore = true
+
+  while (hasMore) {
+    const { data: stockData, error: stockError } = await supabase
+      .from("inventory_items")
+      .select("stock_qty")
+      .range(offset, offset + batchSize - 1)
+
+    if (stockError) {
+      console.error("Error fetching stock data:", stockError)
+      break
+    }
+
+    if (stockData && stockData.length > 0) {
+      const batchTotal = stockData.reduce((sum, item) => sum + (item.stock_qty || 0), 0)
+      totalStock += batchTotal
+      offset += batchSize
+      hasMore = stockData.length === batchSize
+    } else {
+      hasMore = false
+    }
+  }
+
+  // Get low stock items count using the same view as low stock page
+  const { count: lowStockItems } = await supabase
+    .from("low_stock_items")
+    .select("*", { count: 'exact', head: true })
 
   // Get recent transactions count
   const { data: recentTransactions } = await supabase
@@ -99,16 +130,6 @@ export default async function DashboardPage() {
                 <div>
                   <p className="font-medium">Add New Item</p>
                   <p className="text-sm text-muted-foreground">Create a new inventory item</p>
-                </div>
-              </a>
-              <a
-                href="/dashboard/stock-updates"
-                className="flex items-center w-full p-3 rounded-lg border border-border hover:bg-accent transition-colors"
-              >
-                <TrendingUp className="mr-3 h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium">Update Stock</p>
-                  <p className="text-sm text-muted-foreground">Adjust inventory levels</p>
                 </div>
               </a>
               <a

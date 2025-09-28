@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Calendar, Package, MoreHorizontal, Trash2, CheckCircle, XCircle, Clock } from "lucide-react"
+import { ArrowLeft, Calendar, Package, MoreHorizontal, Trash2, Clock, CheckCircle, XCircle } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { updateReservationStatus, deleteReservation } from "@/lib/actions/reservations"
+import { deleteReservation } from "@/lib/actions/reservations"
 import { useToast } from "@/hooks/use-toast"
 
 interface InventoryItem {
@@ -95,30 +95,6 @@ export function ItemReservationsView({ item }: ItemReservationsViewProps) {
     }
   }
 
-  const handleStatusUpdate = async (reservationId: string, newStatus: string) => {
-    try {
-      const result = await updateReservationStatus(reservationId, newStatus)
-      if (result.error) {
-        toast({
-          title: "Error",
-          description: result.error,
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Success",
-          description: "Reservation status updated successfully",
-        })
-        loadReservations()
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update reservation status",
-        variant: "destructive",
-      })
-    }
-  }
 
   const handleDelete = async () => {
     if (!reservationToDelete) return
@@ -281,7 +257,13 @@ export function ItemReservationsView({ item }: ItemReservationsViewProps) {
                       <TableCell>
                         <div>
                           {new Date(reservation.reserved_until).toLocaleDateString()}
-                          {new Date(reservation.reserved_until) < new Date() && (
+                          {(() => {
+                            const reservedDate = new Date(reservation.reserved_until)
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            reservedDate.setHours(0, 0, 0, 0)
+                            return reservedDate < today
+                          })() && (
                             <p className="text-xs text-red-500">Expired</p>
                           )}
                         </div>
@@ -295,36 +277,16 @@ export function ItemReservationsView({ item }: ItemReservationsViewProps) {
                       </TableCell>
                       <TableCell className="max-w-xs truncate">{reservation.notes || "-"}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {reservation.status === "active" && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleStatusUpdate(reservation.id, "fulfilled")}
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleStatusUpdate(reservation.id, "cancelled")}
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setReservationToDelete(reservation)
-                              setDeleteDialogOpen(true)
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setReservationToDelete(reservation)
+                            setDeleteDialogOpen(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

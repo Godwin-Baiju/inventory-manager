@@ -8,7 +8,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   LayoutDashboard,
   PackageSearch,
-  TrendingUp,
   History,
   Menu,
   LogOut,
@@ -31,7 +30,6 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Inventory", href: "/dashboard/inventory", icon: PackageSearch },
   { name: "Add Item", href: "/dashboard/add-item", icon: PackagePlus },
-  { name: "Stock Updates", href: "/dashboard/stock-updates", icon: TrendingUp },
   { name: "Reservations", href: "/dashboard/reservations", icon: Calendar },
   { name: "Low Stock Items", href: "/dashboard/low-stock", icon: TriangleAlert },
   { name: "History", href: "/dashboard/history", icon: History },

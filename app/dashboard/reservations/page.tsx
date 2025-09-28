@@ -9,7 +9,7 @@ import Link from "next/link"
 export default async function ReservationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ item?: string; status?: string; page?: string }>
+  searchParams: Promise<{ status?: string; page?: string }>
 }) {
   const supabase = await createClient()
   const params = await searchParams
@@ -22,11 +22,6 @@ export default async function ReservationsPage({
   // Get user info from auth.users
   const user = data.user
 
-  // Get all inventory items for filtering
-  const { data: inventoryItems } = await supabase
-    .from("inventory_items")
-    .select("id, item_name, item_brand, size")
-    .order("item_name")
 
   // Pagination
   const page = Number.parseInt(params.page || "1")
@@ -73,9 +68,6 @@ export default async function ReservationsPage({
       .order("created_at", { ascending: false })
 
     // Apply filters to fallback query
-    if (params.item && params.item !== "all") {
-      fallbackQuery.eq("item_id", params.item)
-    }
     if (params.status && params.status !== "all") {
       fallbackQuery.eq("status", params.status)
     }
@@ -100,12 +92,11 @@ export default async function ReservationsPage({
           </div>
           <ReservationsTable
             reservations={fallbackReservations || []}
-            inventoryItems={inventoryItems || []}
+            inventoryItems={[]}
             currentPage={page}
             totalPages={totalPages}
             totalCount={fallbackCount || 0}
             filters={{
-              item: params.item,
               status: params.status,
             }}
           />
@@ -115,9 +106,6 @@ export default async function ReservationsPage({
   }
 
   // Apply filters to the main query
-  if (params.item && params.item !== "all") {
-    query = query.eq("item_id", params.item)
-  }
   if (params.status && params.status !== "all") {
     query = query.eq("status", params.status)
   }
@@ -143,12 +131,11 @@ export default async function ReservationsPage({
         </div>
         <ReservationsTable
           reservations={finalReservations || []}
-          inventoryItems={inventoryItems || []}
+          inventoryItems={[]}
           currentPage={page}
           totalPages={totalPages}
           totalCount={finalCount || 0}
           filters={{
-            item: params.item,
             status: params.status,
           }}
         />

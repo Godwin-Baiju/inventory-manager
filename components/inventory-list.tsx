@@ -9,6 +9,7 @@ import { AlertTriangle, History, Download, ChevronLeft, ChevronRight, Calendar, 
 import Link from "next/link"
 import { DeleteItemButton } from "@/components/delete-item-button"
 import { InventorySearch } from "@/components/inventory-search"
+import { StockUpdateDialog } from "@/components/stock-update-dialog"
 import { getAllFilteredInventoryItems } from "@/lib/actions/inventory"
 import jsPDF from "jspdf"
 
@@ -77,8 +78,8 @@ export function InventoryList({
 
       console.log("Fetched items:", allFilteredItems.length)
 
-      const currentDate = new Date().toLocaleDateString()
-      const currentTime = new Date().toLocaleTimeString()
+      const currentDate = new Date().toLocaleDateString('en-US')
+      const currentTime = new Date().toLocaleTimeString('en-US')
       
       // Create PDF with selectable text in landscape
       const pdf = new jsPDF('l', 'mm', 'a4')
@@ -195,7 +196,7 @@ export function InventoryList({
           reserved.toString(),
           available.toString(),
           item.remark || '-',
-          new Date(item.updated_at).toLocaleDateString(),
+          new Date(item.updated_at).toLocaleDateString('en-US'),
           item.updater_name || 'Unknown'
         ]
         
@@ -400,13 +401,14 @@ export function InventoryList({
                     </TableCell>
                     <TableCell className="max-w-xs truncate">{item.remark || "-"}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(item.updated_at).toLocaleDateString()}
+                      {new Date(item.updated_at).toLocaleDateString('en-US')}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {getUserDisplayName(item.updater_name)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        <StockUpdateDialog item={item} onUpdate={() => window.location.reload()} />
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/dashboard/inventory/${item.id}/history`}>
                             <History className="h-4 w-4" />

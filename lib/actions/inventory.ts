@@ -309,19 +309,33 @@ export async function updateStock(formData: FormData) {
     if (transactionType === "in") {
       newStock = previousStock + quantity
     } else {
-      // Enforce reservation safeguard: cannot go below reserved quantity
+      // Stock out logic
       const availableForOut = previousStock - (currentItem.reserved_quantity || 0)
-      if (availableForOut < quantity) {
-        return { error: "Insufficient available stock. Reserved quantity must be respected." }
-      }
+      
+      // If a reservation is selected, allow stock out from reserved quantity
+      if (reservationId) {
+        // Validate that the reservation exists and belongs to this item
+        const { data: reservation, error: reservationError } = await supabase
+          .from("reservations")
+          .select("id, reserved_quantity, item_id")
+          .eq("id", reservationId)
+          .eq("item_id", itemId)
+          .eq("status", "active")
+          .single()
 
-      // Only require reservation ID if trying to stock out more than available unreserved stock
-      // This allows stock out from unreserved available stock without requiring a reservation
-      if (quantity > availableForOut && !reservationId) {
-        return { error: "Reservation selection is required to stock out reserved items." }
-      }
+        if (reservationError || !reservation) {
+          return { error: "Invalid or inactive reservation selected." }
+        }
 
-      newStock = previousStock - quantity
+        // Allow stock out of the reserved quantity
+        newStock = previousStock - quantity
+      } else {
+        // No reservation selected - can only stock out from available unreserved stock
+        if (availableForOut < quantity) {
+          return { error: "Insufficient available stock. Reserved quantity must be respected." }
+        }
+        newStock = previousStock - quantity
+      }
     }
 
     // Update the inventory item stock
@@ -365,16 +379,14 @@ export async function updateStock(formData: FormData) {
         .single()
 
       if (!resError && reservation) {
-        // Update reservation status to fulfilled (inactive). Do not set reserved_quantity to 0 due to CHECK constraint.
-        const { error: updResErr } = await supabase
+        // Delete the reservation when stocking out from it
+        const { error: delResErr } = await supabase
           .from("reservations")
-          .update({
-            status: "fulfilled",
-          })
+          .delete()
           .eq("id", reservationId)
 
-        if (updResErr) {
-          console.error("[v0] Error updating reservation after stock-out:", updResErr)
+        if (delResErr) {
+          console.error("[v0] Error deleting reservation after stock-out:", delResErr)
         }
 
         // Decrement the item's aggregate reserved_quantity safely
@@ -396,7 +408,6 @@ export async function updateStock(formData: FormData) {
 
     revalidatePath("/dashboard")
     revalidatePath("/dashboard/inventory")
-    revalidatePath("/dashboard/stock-updates")
     revalidatePath("/dashboard/low-stock")
     revalidatePath("/dashboard/reservations")
     return { success: true }

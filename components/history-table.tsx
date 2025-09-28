@@ -43,7 +43,6 @@ interface HistoryTableProps {
   totalPages: number
   totalCount: number
   filters: {
-    item?: string
     type?: string
   }
   isLoading?: boolean
@@ -68,8 +67,7 @@ export function HistoryTable({
     try {
       // Fetch all filtered transactions for PDF
       const { transactions: allFilteredTransactions, error } = await getAllFilteredTransactions({
-        item: filters.item,
-        type: filters.type,
+        type: filters.type && filters.type !== 'all' ? filters.type : undefined,
         search: searchTerm
       })
 
@@ -78,7 +76,7 @@ export function HistoryTable({
         return
       }
 
-      const currentDate = new Date().toLocaleDateString()
+      const currentDate = new Date().toLocaleDateString('en-US')
       const currentTime = new Date().toLocaleTimeString()
       
       // Create PDF with selectable text in landscape
@@ -107,6 +105,29 @@ export function HistoryTable({
         }
         yPosition += 2
       }
+
+      // Helper function to add text in a cell with proper wrapping and centering
+      const addCellText = (text: string, x: number, y: number, width: number, height: number, fontSize: number = 8, color: string = '#374151') => {
+        pdf.setFontSize(fontSize)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(color)
+        
+        // Split text to fit within cell width
+        const lines = pdf.splitTextToSize(text, width - 4) // 4mm padding (2mm each side)
+        
+        // Calculate starting Y position to center text vertically
+        const lineHeight = fontSize * 0.5
+        const totalTextHeight = lines.length * lineHeight
+        const startY = y + height / 2 - totalTextHeight / 2 + lineHeight / 2
+        
+        // Add each line
+        for (let i = 0; i < lines.length; i++) {
+          const lineY = startY + (i * lineHeight)
+          if (lineY <= y + height - 1) { // Make sure text fits in cell
+            pdf.text(lines[i], x + 2, lineY, { align: 'left', baseline: 'middle' })
+          }
+        }
+      }
       
       // Helper function to add a line
       const addLine = () => {
@@ -129,13 +150,9 @@ export function HistoryTable({
       yPosition += 10
       
       // Filters section
-      if (filters.item || filters.type || searchTerm) {
+      if ((filters.type && filters.type !== 'all') || searchTerm) {
         addText('Applied Filters:', 12, true, '#1f2937')
-        if (filters.item) {
-          const itemName = inventoryItems.find(item => item.id === filters.item)?.item_name || 'Selected Item'
-          addText(`Item: ${itemName}`, 10, false, '#374151')
-        }
-        if (filters.type) {
+        if (filters.type && filters.type !== 'all') {
           addText(`Type: ${filters.type === 'in' ? 'Stock In' : 'Stock Out'}`, 10, false, '#374151')
         }
         if (searchTerm) {
@@ -148,7 +165,7 @@ export function HistoryTable({
       
       // Table headers with better spacing for landscape
       const headers = ['Date & Time', 'Item', 'Type', 'Quantity', 'Stock Change', 'User', 'Reason']
-      const columnWidths = [35, 60, 20, 20, 25, 25, 40] // in mm - adjusted for landscape
+      const columnWidths = [35, 60, 20, 20, 25, 50, 40] // in mm - adjusted for landscape
       let xPosition = margin
       
       // Add table headers with borders
@@ -158,14 +175,14 @@ export function HistoryTable({
       
       // Draw header background (muted color from website)
       pdf.setFillColor(248, 250, 252) // #f8fafc - card background
-      pdf.rect(margin, yPosition - 3, contentWidth, 8, 'F')
+      pdf.rect(margin, yPosition - 3, contentWidth, 12, 'F')
       
       // Draw header borders (including left border)
       pdf.setDrawColor(209, 213, 219) // #d1d5db - border color from website
-      pdf.line(margin, yPosition - 3, margin, yPosition + 5) // left border
-      pdf.line(pageWidth - margin, yPosition - 3, pageWidth - margin, yPosition + 5) // right border
+      pdf.line(margin, yPosition - 3, margin, yPosition + 9) // left border
+      pdf.line(pageWidth - margin, yPosition - 3, pageWidth - margin, yPosition + 9) // right border
       pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3) // top border
-      pdf.line(margin, yPosition + 5, pageWidth - margin, yPosition + 5) // bottom border
+      pdf.line(margin, yPosition + 9, pageWidth - margin, yPosition + 9) // bottom border
       
       for (let i = 0; i < headers.length; i++) {
         if (xPosition + columnWidths[i] > pageWidth - margin) {
@@ -176,11 +193,11 @@ export function HistoryTable({
             yPosition = margin
           }
         }
-        // Middle-left alignment for headers
-        pdf.text(headers[i], xPosition + 2, yPosition, { align: 'left', baseline: 'middle' })
+        // Use new cell text function for proper centering
+        addCellText(headers[i], xPosition, yPosition - 3, columnWidths[i], 12, 9, '#1f2937')
         xPosition += columnWidths[i]
       }
-      yPosition += 8
+      yPosition += 12
       
       // Add table rows with consistent styling
       pdf.setFont('helvetica', 'normal')
@@ -189,7 +206,7 @@ export function HistoryTable({
       for (let rowIndex = 0; rowIndex < allFilteredTransactions.length; rowIndex++) {
         const transaction = allFilteredTransactions[rowIndex]
         
-        if (yPosition > pageHeight - margin - 15) {
+        if (yPosition > pageHeight - margin - 20) {
           pdf.addPage()
           yPosition = margin
         }
@@ -201,7 +218,7 @@ export function HistoryTable({
           `${transaction.inventory_items.item_name}\n${transaction.inventory_items.item_brand} • ${transaction.inventory_items.size}`,
           `Stock ${transaction.transaction_type === 'in' ? 'In' : 'Out'}`,
           `${transaction.transaction_type === 'in' ? '+' : '-'}${transaction.quantity}`,
-          `${transaction.previous_stock} → ${transaction.new_stock}`,
+          `${transaction.previous_stock} to ${transaction.new_stock}`,
           transaction.user_name || 'Unknown',
           transaction.reason || '-'
         ]
@@ -212,14 +229,14 @@ export function HistoryTable({
         
         // Draw row background
         pdf.setFillColor(rowBgColor[0], rowBgColor[1], rowBgColor[2])
-        pdf.rect(margin, yPosition - 3, contentWidth, 8, 'F')
+        pdf.rect(margin, yPosition - 3, contentWidth, 12, 'F')
         
         // Draw row borders (including left border)
         pdf.setDrawColor(209, 213, 219) // #d1d5db - border color from website
-        pdf.line(margin, yPosition - 3, margin, yPosition + 5) // left border
-        pdf.line(pageWidth - margin, yPosition - 3, pageWidth - margin, yPosition + 5) // right border
+        pdf.line(margin, yPosition - 3, margin, yPosition + 9) // left border
+        pdf.line(pageWidth - margin, yPosition - 3, pageWidth - margin, yPosition + 9) // right border
         pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3) // top border
-        pdf.line(margin, yPosition + 5, pageWidth - margin, yPosition + 5) // bottom border
+        pdf.line(margin, yPosition + 9, pageWidth - margin, yPosition + 9) // bottom border
         
         xPosition = margin
         for (let i = 0; i < rowData.length; i++) {
@@ -233,30 +250,24 @@ export function HistoryTable({
           }
           
           // Color coding for transaction types (using website colors)
+          let cellColor = '#374151' // default foreground color
           if (i === 2) { // Type column
-            pdf.setTextColor(transaction.transaction_type === 'in' ? '#16a34a' : '#dc2626') // green for in, red for out
+            cellColor = transaction.transaction_type === 'in' ? '#16a34a' : '#dc2626' // green for in, red for out
           } else if (i === 3) { // Quantity column
-            pdf.setTextColor(transaction.transaction_type === 'in' ? '#16a34a' : '#dc2626') // green for in, red for out
-          } else {
-            pdf.setTextColor('#374151') // foreground color
+            cellColor = transaction.transaction_type === 'in' ? '#16a34a' : '#dc2626' // green for in, red for out
           }
           
           // Draw vertical line between columns
           if (i > 0) {
-            pdf.line(xPosition, yPosition - 3, xPosition, yPosition + 5)
+            pdf.line(xPosition, yPosition - 3, xPosition, yPosition + 9)
           }
           
-          // Handle multi-line text with middle-left alignment
-          const lines = rowData[i].split('\n')
-          let currentY = yPosition + 1
-          for (const line of lines) {
-            pdf.text(line, xPosition + 2, currentY, { align: 'left', baseline: 'middle' })
-            currentY += 3
-          }
+          // Use new cell text function for proper wrapping and centering
+          addCellText(rowData[i], xPosition, yPosition - 3, columnWidths[i], 12, 8, cellColor)
           xPosition += columnWidths[i]
         }
         
-        yPosition += 8
+        yPosition += 12
       }
       
       // Footer
@@ -301,10 +312,6 @@ export function HistoryTable({
     setLocalCurrentPage(page)
   }
 
-  const clearFilters = () => {
-    setIsFilterLoading(true)
-    router.push("/dashboard/history")
-  }
 
   const filteredTransactions = transactions.filter((transaction) => {
     if (!searchTerm) return true
@@ -336,8 +343,8 @@ export function HistoryTable({
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString)
     return {
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      date: date.toLocaleDateString('en-US'),
+      time: date.toLocaleTimeString('en-US', { hour: "2-digit", minute: "2-digit", hour12: true }),
     }
   }
 
@@ -353,8 +360,8 @@ export function HistoryTable({
           <CardDescription>Filter transactions by item, type, or search by keywords</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
+          <div className="grid gap-4 md:grid-cols-9">
+            <div className="space-y-2 md:col-span-6">
               <label className="text-sm font-medium">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -366,27 +373,7 @@ export function HistoryTable({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Item</label>
-              <Select
-                value={filters.item || "all"}
-                onValueChange={(value) => updateFilters({ item: value || undefined })}
-                disabled={isFilterLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All items" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All items</SelectItem>
-                  {inventoryItems.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.item_name} - {item.item_brand} ({item.size})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-3">
               <label className="text-sm font-medium">Transaction Type</label>
               <Select
                 value={filters.type || "all"}
@@ -402,24 +389,6 @@ export function HistoryTable({
                   <SelectItem value="out">Stock Out</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Actions</label>
-              <Button 
-                variant="outline" 
-                onClick={clearFilters} 
-                className="w-full bg-transparent"
-                disabled={isFilterLoading}
-              >
-                {isFilterLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Clearing...
-                  </>
-                ) : (
-                  "Clear Filters"
-                )}
-              </Button>
             </div>
           </div>
         </CardContent>

@@ -6,7 +6,7 @@ import { HistoryTable } from "@/components/history-table"
 export default async function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ item?: string; type?: string; page?: string }>
+  searchParams: Promise<{ type?: string; page?: string }>
 }) {
   const supabase = await createClient()
   const params = await searchParams
@@ -19,11 +19,6 @@ export default async function HistoryPage({
   // Get user info from auth.users
   const user = data.user
 
-  // Get all inventory items for filtering
-  const { data: inventoryItems } = await supabase
-    .from("inventory_items")
-    .select("id, item_name, item_brand, size")
-    .order("item_name")
 
   console.log("[v0] Fetching transactions...")
 
@@ -39,9 +34,6 @@ export default async function HistoryPage({
       .select("*", { count: 'exact', head: true })
 
     // Apply filters to count query
-    if (params.item && params.item !== "all") {
-      countQuery = countQuery.eq("item_id", params.item)
-    }
     if (params.type && params.type !== "all" && (params.type === "in" || params.type === "out")) {
       countQuery = countQuery.eq("transaction_type", params.type)
     }
@@ -73,9 +65,6 @@ export default async function HistoryPage({
       .order("created_at", { ascending: false })
 
     // Apply filters
-    if (params.item && params.item !== "all") {
-      query = query.eq("item_id", params.item)
-    }
     if (params.type && params.type !== "all" && (params.type === "in" || params.type === "out")) {
       query = query.eq("transaction_type", params.type)
     }
@@ -93,9 +82,6 @@ export default async function HistoryPage({
       .select("*", { count: 'exact', head: true })
 
     // Apply filters to count query
-    if (params.item && params.item !== "all") {
-      countQuery = countQuery.eq("item_id", params.item)
-    }
     if (params.type && params.type !== "all" && (params.type === "in" || params.type === "out")) {
       countQuery = countQuery.eq("transaction_type", params.type)
     }
@@ -126,9 +112,6 @@ export default async function HistoryPage({
       .order("created_at", { ascending: false })
 
     // Apply filters
-    if (params.item && params.item !== "all") {
-      query = query.eq("item_id", params.item)
-    }
     if (params.type && params.type !== "all" && (params.type === "in" || params.type === "out")) {
       query = query.eq("transaction_type", params.type)
     }
@@ -157,12 +140,11 @@ export default async function HistoryPage({
         </div>
         <HistoryTable
           transactions={transactions || []}
-          inventoryItems={inventoryItems || []}
+          inventoryItems={[]}
           currentPage={1}
           totalPages={1}
           totalCount={count || 0}
           filters={{
-            item: params.item,
             type: params.type,
           }}
         />

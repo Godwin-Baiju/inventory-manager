@@ -7,11 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Search, Filter, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, CheckCircle, XCircle, Clock } from "lucide-react"
+import { Search, Filter, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { updateReservationStatus, deleteReservation } from "@/lib/actions/reservations"
+import { deleteReservation } from "@/lib/actions/reservations"
 import { useToast } from "@/hooks/use-toast"
 
 interface Reservation {
@@ -49,7 +48,6 @@ interface ReservationsTableProps {
   totalPages: number
   totalCount: number
   filters: {
-    item?: string
     status?: string
   }
 }
@@ -104,32 +102,6 @@ export function ReservationsTable({
     }
   }
 
-  const handleStatusChange = async (reservationId: string, newStatus: string) => {
-    setIsLoading(true)
-    try {
-      const result = await updateReservationStatus(reservationId, newStatus)
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: `Reservation status updated to ${newStatus}`,
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to update status",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update status",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleDeleteClick = (reservationId: string) => {
     setReservationToDelete(reservationId)
@@ -198,22 +170,6 @@ export function ReservationsTable({
                 />
               </div>
             </div>
-            <Select
-              value={filters.item || "all"}
-              onValueChange={(value) => updateFilters({ item: value || undefined })}
-            >
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="All Items" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Items</SelectItem>
-                {inventoryItems.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.item_name} - {item.item_brand}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select
               value={filters.status || "all"}
               onValueChange={(value) => updateFilters({ status: value || undefined })}
@@ -299,7 +255,13 @@ export function ReservationsTable({
                             ? new Date(reservation.reserved_until).toLocaleDateString()
                             : 'N/A'
                           }
-                          {reservation.reserved_until && new Date(reservation.reserved_until) < new Date() && (
+                          {reservation.reserved_until && (() => {
+                            const reservedDate = new Date(reservation.reserved_until)
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            reservedDate.setHours(0, 0, 0, 0)
+                            return reservedDate < today
+                          })() && (
                             <p className="text-xs text-red-500">Expired</p>
                           )}
                         </div>
@@ -312,45 +274,15 @@ export function ReservationsTable({
                         )}
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={isLoading}>
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleStatusChange(reservation.id, "active")}
-                              disabled={reservation.status === "active" || isLoading}
-                            >
-                              <Clock className="mr-2 h-4 w-4" />
-                              Mark as Active
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleStatusChange(reservation.id, "fulfilled")}
-                              disabled={reservation.status === "fulfilled" || isLoading}
-                            >
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Mark as Fulfilled
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleStatusChange(reservation.id, "cancelled")}
-                              disabled={reservation.status === "cancelled" || isLoading}
-                            >
-                              <XCircle className="mr-2 h-4 w-4" />
-                              Mark as Cancelled
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClick(reservation.id)}
-                              disabled={isLoading}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(reservation.id)}
+                          disabled={isLoading}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

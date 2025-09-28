@@ -162,7 +162,7 @@ export function StockUpdateForm({ inventoryItems, onInventoryUpdate }: StockUpda
   }
 
   const quantityDisabled = transactionType === "out" && !!selectedReservationId
-  const reservationDisabled = transactionType !== "out" || (!!manualQuantity && Number.parseInt(manualQuantity) > 0)
+  const reservationDisabled = transactionType !== "out" || isLoadingReservations || reservations.length === 0
 
   return (
     <div className="max-w-2xl">
@@ -249,7 +249,7 @@ export function StockUpdateForm({ inventoryItems, onInventoryUpdate }: StockUpda
                 </div>
               )}
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-6">
                 <div className="space-y-2">
                   <Label>Transaction Type *</Label>
                   <div className="flex gap-4">
@@ -324,9 +324,9 @@ export function StockUpdateForm({ inventoryItems, onInventoryUpdate }: StockUpda
                         emptyMessage="No reservations found."
                         items={reservations.map((r) => ({
                           value: r.id,
-                          label: `${r.party_name} • ${r.reserved_quantity} units • until ${new Date(r.reserved_until).toLocaleDateString()}`
+                          label: `${r.party_name} • ${r.reserved_quantity} units • until ${new Date(r.reserved_until).toLocaleDateString('en-US')}`
                         }))}
-                        disabled={reservationDisabled || isLoadingReservations || reservations.length === 0}
+                        disabled={reservationDisabled}
                       />
                     </div>
                     <Button

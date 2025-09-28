@@ -76,9 +76,20 @@ export function SearchableSelect({
               {items.map((item) => (
                 <CommandItem
                   key={item.value}
-                  value={item.label}
-                  onSelect={() => {
-                    onValueChange?.(item.value === value ? "" : item.value)
+                  value={item.value}
+                  onSelect={(currentValue) => {
+                    console.log("CommandItem onSelect called:", currentValue, "item.value:", item.value)
+                    const newValue = item.value === value ? "" : item.value
+                    console.log("Calling onValueChange with:", newValue)
+                    onValueChange?.(newValue)
+                    setOpen(false)
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    console.log("CommandItem onClick called for item:", item.value)
+                    const newValue = item.value === value ? "" : item.value
+                    console.log("Calling onValueChange from onClick with:", newValue)
+                    onValueChange?.(newValue)
                     setOpen(false)
                   }}
                   disabled={item.disabled}

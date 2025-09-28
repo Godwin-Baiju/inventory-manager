@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AlertTriangle, Package, Search, Plus } from "lucide-react"
 import Link from "next/link"
+import { StockUpdateDialog } from "@/components/stock-update-dialog"
 
 interface InventoryItem {
   id: string
@@ -126,9 +127,7 @@ export function LowStockTable({ items }: LowStockTableProps) {
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Button size="sm" asChild>
-                          <Link href={`/dashboard/stock-updates?item=${item.id}`}>Restock</Link>
-                        </Button>
+                        <StockUpdateDialog item={item} onUpdate={() => window.location.reload()} />
                       </TableCell>
                     </TableRow>
                   )
