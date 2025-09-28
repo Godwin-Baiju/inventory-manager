@@ -62,8 +62,10 @@ export function HistoryTable({
   const [searchTerm, setSearchTerm] = useState("")
   const [localCurrentPage, setLocalCurrentPage] = useState(1)
   const [isFilterLoading, setIsFilterLoading] = useState(false)
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
 
   const handleDownloadPDF = async () => {
+    setIsDownloadingPDF(true)
     try {
       // Fetch all filtered transactions for PDF
       const { transactions: allFilteredTransactions, error } = await getAllFilteredTransactions({
@@ -287,6 +289,8 @@ export function HistoryTable({
       pdf.save(filename)
     } catch (error) {
       console.error("Error generating PDF:", error)
+    } finally {
+      setIsDownloadingPDF(false)
     }
   }
 
@@ -403,9 +407,18 @@ export function HistoryTable({
               Transaction History
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
+                {isDownloadingPDF ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PDF
+                  </>
+                )}
               </Button>
             </div>
           </CardTitle>

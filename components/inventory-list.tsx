@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { AlertTriangle, History, Download, ChevronLeft, ChevronRight, Calendar, CalendarPlus, PackageSearch } from "lucide-react"
+import { AlertTriangle, History, Download, ChevronLeft, ChevronRight, Calendar, CalendarPlus, PackageSearch, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { DeleteItemButton } from "@/components/delete-item-button"
 import { InventorySearch } from "@/components/inventory-search"
@@ -48,6 +48,7 @@ export function InventoryList({
   const searchParams = useSearchParams()
   const [filteredItems, setFilteredItems] = useState(items)
   const [localSearchTerm, setLocalSearchTerm] = useState(searchQuery || "")
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
 
   useEffect(() => {
     setFilteredItems(items)
@@ -64,6 +65,7 @@ export function InventoryList({
   }
 
   const handleDownloadPDF = async () => {
+    setIsDownloadingPDF(true)
     try {
       console.log("Button clicked - starting PDF generation...")
       
@@ -291,6 +293,8 @@ export function InventoryList({
     } catch (error) {
       console.error("Error generating PDF:", error)
       alert("Error generating PDF: " + error.message)
+    } finally {
+      setIsDownloadingPDF(false)
     }
   }
 
@@ -365,9 +369,18 @@ export function InventoryList({
                   : `Complete list of your inventory items (${totalCount} total)`}
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
+            <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
+              {isDownloadingPDF ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
+                </>
+              )}
             </Button>
           </div>
           <InventorySearch 
