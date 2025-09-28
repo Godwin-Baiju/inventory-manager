@@ -107,6 +107,29 @@ export function InventoryList({
         }
         yPosition += 2
       }
+
+      // Helper function to add text in a cell with proper wrapping and centering
+      const addCellText = (text: string, x: number, y: number, width: number, height: number, fontSize: number = 8, color: string = '#374151') => {
+        pdf.setFontSize(fontSize)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(color)
+        
+        // Split text to fit within cell width
+        const lines = pdf.splitTextToSize(text, width - 4) // 4mm padding (2mm each side)
+        
+        // Calculate starting Y position to center text vertically
+        const lineHeight = fontSize * 0.5
+        const totalTextHeight = lines.length * lineHeight
+        const startY = y + height / 2 - totalTextHeight / 2 + lineHeight / 2
+        
+        // Add each line
+        for (let i = 0; i < lines.length; i++) {
+          const lineY = startY + (i * lineHeight)
+          if (lineY <= y + height - 1) { // Make sure text fits in cell
+            pdf.text(lines[i], x + 2, lineY, { align: 'left', baseline: 'middle' })
+          }
+        }
+      }
       
       // Helper function to add a line
       const addLine = () => {
@@ -149,14 +172,14 @@ export function InventoryList({
       
       // Draw header background (muted color from website)
       pdf.setFillColor(248, 250, 252) // #f8fafc - card background
-      pdf.rect(margin, yPosition - 3, contentWidth, 8, 'F')
+      pdf.rect(margin, yPosition - 3, contentWidth, 12, 'F')
       
       // Draw header borders (including left border)
       pdf.setDrawColor(209, 213, 219) // #d1d5db - border color from website
-      pdf.line(margin, yPosition - 3, margin, yPosition + 5) // left border
-      pdf.line(pageWidth - margin, yPosition - 3, pageWidth - margin, yPosition + 5) // right border
+      pdf.line(margin, yPosition - 3, margin, yPosition + 9) // left border
+      pdf.line(pageWidth - margin, yPosition - 3, pageWidth - margin, yPosition + 9) // right border
       pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3) // top border
-      pdf.line(margin, yPosition + 5, pageWidth - margin, yPosition + 5) // bottom border
+      pdf.line(margin, yPosition + 9, pageWidth - margin, yPosition + 9) // bottom border
       
       for (let i = 0; i < headers.length; i++) {
         if (xPosition + columnWidths[i] > pageWidth - margin) {
@@ -167,11 +190,11 @@ export function InventoryList({
             yPosition = margin
           }
         }
-        // Middle-left alignment for headers
-        pdf.text(headers[i], xPosition + 2, yPosition, { align: 'left', baseline: 'middle' })
+        // Use new cell text function for proper centering
+        addCellText(headers[i], xPosition, yPosition - 3, columnWidths[i], 12, 9, '#1f2937')
         xPosition += columnWidths[i]
       }
-      yPosition += 8
+      yPosition += 12
       
       // Add table rows with consistent styling
       pdf.setFont('helvetica', 'normal')
@@ -180,7 +203,7 @@ export function InventoryList({
       for (let rowIndex = 0; rowIndex < allFilteredItems.length; rowIndex++) {
         const item = allFilteredItems[rowIndex]
         
-        if (yPosition > pageHeight - margin - 15) {
+        if (yPosition > pageHeight - margin - 20) {
           pdf.addPage()
           yPosition = margin
         }
@@ -206,14 +229,14 @@ export function InventoryList({
         
         // Draw row background
         pdf.setFillColor(rowBgColor[0], rowBgColor[1], rowBgColor[2])
-        pdf.rect(margin, yPosition - 3, contentWidth, 8, 'F')
+        pdf.rect(margin, yPosition - 3, contentWidth, 12, 'F')
         
         // Draw row borders (including left border)
         pdf.setDrawColor(209, 213, 219) // #d1d5db - border color from website
-        pdf.line(margin, yPosition - 3, margin, yPosition + 5) // left border
-        pdf.line(pageWidth - margin, yPosition - 3, pageWidth - margin, yPosition + 5) // right border
+        pdf.line(margin, yPosition - 3, margin, yPosition + 9) // left border
+        pdf.line(pageWidth - margin, yPosition - 3, pageWidth - margin, yPosition + 9) // right border
         pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3) // top border
-        pdf.line(margin, yPosition + 5, pageWidth - margin, yPosition + 5) // bottom border
+        pdf.line(margin, yPosition + 9, pageWidth - margin, yPosition + 9) // bottom border
         
         xPosition = margin
         for (let i = 0; i < rowData.length; i++) {
@@ -227,25 +250,24 @@ export function InventoryList({
           }
           
           // Color coding for stock levels (using website colors)
+          let cellColor = '#374151' // default foreground color
           if (i === 3 && item.stock_qty <= 10) { // Total Stock column
-            pdf.setTextColor('#dc2626') // destructive color
+            cellColor = '#dc2626' // destructive color
           } else if (i === 5 && available <= 10) { // Available column
-            pdf.setTextColor(available === 0 ? '#dc2626' : '#f59e0b') // destructive or warning
-          } else {
-            pdf.setTextColor('#374151') // foreground color
+            cellColor = available === 0 ? '#dc2626' : '#f59e0b' // destructive or warning
           }
           
           // Draw vertical line between columns
           if (i > 0) {
-            pdf.line(xPosition, yPosition - 3, xPosition, yPosition + 5)
+            pdf.line(xPosition, yPosition - 3, xPosition, yPosition + 9)
           }
           
-          // Middle-left alignment for table cells
-          pdf.text(rowData[i], xPosition + 2, yPosition + 1, { align: 'left', baseline: 'middle' })
+          // Use new cell text function for proper wrapping and centering
+          addCellText(rowData[i], xPosition, yPosition - 3, columnWidths[i], 12, 8, cellColor)
           xPosition += columnWidths[i]
         }
         
-        yPosition += 8
+        yPosition += 12
       }
       
       // Footer

@@ -107,49 +107,81 @@ export async function getAllFilteredInventoryItems(search?: string) {
   }
 
   try {
-    // Try to get data from the view with user information first
-    let query = supabase
-      .from("inventory_items_with_users")
-      .select("*, reserved_quantity")
-      .order("created_at", { ascending: false })
+    // Try to get data from the view with user information first using pagination
+    let allInventoryItems: any[] = []
+    let offset = 0
+    const batchSize = 1000
+    let hasMore = true
 
-    // Apply search filter if provided
-    if (search) {
-      const searchTerm = search.toLowerCase()
-      query = query.or(`item_name.ilike.%${searchTerm}%,item_brand.ilike.%${searchTerm}%,size.ilike.%${searchTerm}%,remark.ilike.%${searchTerm}%`)
+    while (hasMore) {
+      let query = supabase
+        .from("inventory_items_with_users")
+        .select("*, reserved_quantity")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + batchSize - 1)
+
+      // Apply search filter if provided
+      if (search) {
+        const searchTerm = search.toLowerCase()
+        query = query.or(`item_name.ilike.%${searchTerm}%,item_brand.ilike.%${searchTerm}%,size.ilike.%${searchTerm}%,remark.ilike.%${searchTerm}%`)
+      }
+
+      const { data: batchItems, error } = await query
+
+      if (error) {
+        console.log("[v0] Error fetching inventory items for print:", error)
+        throw error
+      }
+
+      if (batchItems && batchItems.length > 0) {
+        allInventoryItems = allInventoryItems.concat(batchItems)
+        offset += batchSize
+        hasMore = batchItems.length === batchSize
+      } else {
+        hasMore = false
+      }
     }
 
-    const { data: inventoryItems, error } = await query
-
-    if (error) {
-      console.log("[v0] Error fetching inventory items for print:", error)
-      throw error
-    }
-
-    return { inventoryItems: inventoryItems || [], error: null }
+    return { inventoryItems: allInventoryItems, error: null }
   } catch (viewError) {
     console.log("[v0] View not available, falling back to regular table")
     
-    // Fallback to regular table if view doesn't exist
-    let query = supabase
-      .from("inventory_items")
-      .select("*, reserved_quantity")
-      .order("created_at", { ascending: false })
+    // Fallback to regular table if view doesn't exist using pagination
+    let allInventoryItems: any[] = []
+    let offset = 0
+    const batchSize = 1000
+    let hasMore = true
 
-    // Apply search filter if provided
-    if (search) {
-      const searchTerm = search.toLowerCase()
-      query = query.or(`item_name.ilike.%${searchTerm}%,item_brand.ilike.%${searchTerm}%,size.ilike.%${searchTerm}%,remark.ilike.%${searchTerm}%`)
+    while (hasMore) {
+      let query = supabase
+        .from("inventory_items")
+        .select("*, reserved_quantity")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + batchSize - 1)
+
+      // Apply search filter if provided
+      if (search) {
+        const searchTerm = search.toLowerCase()
+        query = query.or(`item_name.ilike.%${searchTerm}%,item_brand.ilike.%${searchTerm}%,size.ilike.%${searchTerm}%,remark.ilike.%${searchTerm}%`)
+      }
+
+      const { data: batchItems, error } = await query
+
+      if (error) {
+        console.log("[v0] Error fetching inventory items for print (fallback):", error)
+        return { inventoryItems: [], error }
+      }
+
+      if (batchItems && batchItems.length > 0) {
+        allInventoryItems = allInventoryItems.concat(batchItems)
+        offset += batchSize
+        hasMore = batchItems.length === batchSize
+      } else {
+        hasMore = false
+      }
     }
 
-    const { data: inventoryItems, error: fallbackError } = await query
-
-    if (fallbackError) {
-      console.log("[v0] Error fetching inventory items for print:", fallbackError)
-      return { inventoryItems: [], error: fallbackError }
-    }
-
-    return { inventoryItems: inventoryItems || [], error: null }
+    return { inventoryItems: allInventoryItems, error: null }
   }
 }
 
