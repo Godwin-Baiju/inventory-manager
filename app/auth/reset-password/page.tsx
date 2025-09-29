@@ -12,55 +12,14 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 
 export default function ResetPasswordPage() {
+  const [email, setEmail] = useState("")
+  const [code, setCode] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [isSessionReady, setIsSessionReady] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-
-  // Helper: extract code from query or hash
-  const extractRecoveryCode = (): string | undefined => {
-    let code = searchParams.get("code") || searchParams.get("token") || undefined
-    if (!code && typeof window !== "undefined") {
-      const hash = new URL(window.location.href).hash
-      if (hash && hash.startsWith("#")) {
-        const params = new URLSearchParams(hash.substring(1))
-        code = params.get("code") || params.get("token") || undefined
-      }
-    }
-    return code ?? undefined
-  }
-
-  useEffect(() => {
-    // Handle the auth callback by exchanging the recovery code for a session
-    const handleAuthCallback = async () => {
-      const supabase = createClient()
-
-      const code = extractRecoveryCode()
-
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        if (exchangeError) {
-          setError("Invalid or expired reset link")
-          setIsSessionReady(false)
-          return
-        }
-      }
-
-      const { data, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !data.session) {
-        setError("Invalid or expired reset link")
-        setIsSessionReady(false)
-        return
-      }
-
-      setIsSessionReady(true)
-    }
-    handleAuthCallback()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,25 +27,11 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
     setError(null)
 
-    // Ensure we have a valid session (recovery) before updating password
-    const { data: sessionCheck } = await supabase.auth.getSession()
-    if (!sessionCheck.session) {
-      const code = extractRecoveryCode()
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        if (exchangeError) {
-          setError("Invalid or expired reset link")
-          setIsLoading(false)
-          setIsSessionReady(false)
-          return
-        }
-        setIsSessionReady(true)
-      } else {
-        setError("Invalid or expired reset link")
-        setIsLoading(false)
-        setIsSessionReady(false)
-        return
-      }
+    // Verify email OTP to establish a session
+    if (!email || !code) {
+      setError("Email and verification code are required")
+      setIsLoading(false)
+      return
     }
 
     if (password !== confirmPassword) {
@@ -102,10 +47,17 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password,
+      // First verify the OTP (email code sign-in)
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: 'email',
       })
-      if (error) throw error
+      if (verifyError) throw verifyError
+
+      // Now we have a session; update password
+      const { error: updateError } = await supabase.auth.updateUser({ password })
+      if (updateError) throw updateError
       router.push("/auth/login?message=Password updated successfully")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
@@ -113,6 +65,13 @@ export default function ResetPasswordPage() {
       setIsLoading(false)
     }
   }
+
+  // Prefill email from query
+  useEffect(() => {
+    const qEmail = searchParams.get('email')
+    if (qEmail) setEmail(qEmail)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
@@ -123,10 +82,34 @@ export default function ResetPasswordPage() {
               <Image src="/logo.png" alt="Our Own Marble House" width={120} height={32} className="h-12 w-auto" />
             </div>
             <CardTitle className="text-2xl font-bold text-foreground">Set New Password</CardTitle>
-            <CardDescription className="text-muted-foreground">Enter your new password below</CardDescription>
+            <CardDescription className="text-muted-foreground">Enter the code sent to your email and set a new password</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="code">Verification Code</Label>
+                <Input
+                  id="code"
+                  type="text"
+                  placeholder="Enter the 6-digit code"
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="password">New Password</Label>
                 <Input
@@ -152,8 +135,8 @@ export default function ResetPasswordPage() {
                 />
               </div>
               {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading || !isSessionReady}>
-                {isLoading ? "Updating..." : !isSessionReady ? "Verifying link..." : "Update Password"}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Updating..." : "Update Password"}
               </Button>
             </form>
           </CardContent>
