@@ -370,8 +370,8 @@ export function InventoryList({
                   : `Complete list of your inventory items (${totalCount} total)`}
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
                 {isDownloadingPDF ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -384,7 +384,7 @@ export function InventoryList({
                   </>
                 )}
               </Button>
-              <Button variant="outline" size="sm" onClick={async () => {
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={async () => {
                 setIsDownloadingCSV(true)
                 try {
                   const { inventoryItems: allFilteredItems, error } = await getAllFilteredInventoryItems(searchQuery)

@@ -407,8 +407,8 @@ export function HistoryTable({
               <History className="mr-2 h-5 w-5" />
               Transaction History
             </div>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
                 {isDownloadingPDF ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -421,7 +421,7 @@ export function HistoryTable({
                   </>
                 )}
               </Button>
-              <Button variant="outline" size="sm" onClick={async () => {
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={async () => {
                 setIsDownloadingCSV(true)
                 try {
                   const { transactions: allFilteredTransactions, error } = await getAllFilteredTransactions({
