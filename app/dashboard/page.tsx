@@ -12,8 +12,13 @@ export default async function DashboardPage() {
     redirect("/auth/login")
   }
 
-  // Get user info from auth.users
+  // Get user info from auth.users and profiles
   const user = data.user
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single()
 
   // Get inventory statistics
   // Get total count of items
@@ -62,7 +67,7 @@ export default async function DashboardPage() {
   const recentTransactionsCount = recentTransactions?.length || 0
 
   return (
-    <DashboardLayout userEmail={data.user.email!} userName={user.user_metadata?.full_name || user.email}>
+    <DashboardLayout userEmail={data.user.email!} userName={profile?.full_name || user.user_metadata?.full_name || user.email}>
       <div className="p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Dashboard Overview</h1>

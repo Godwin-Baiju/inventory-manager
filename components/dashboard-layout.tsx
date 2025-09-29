@@ -66,17 +66,25 @@ export function DashboardLayout({ children, userEmail, userName }: DashboardLayo
         })}
       </nav>
       <div className="border-t p-4">
-        <div className="flex items-center space-x-3 mb-3">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-            <span className="text-sm font-medium text-primary-foreground">
-              {(userName || userEmail).charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{userName || "User"}</p>
-            <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-          </div>
-        </div>
+			{(() => {
+				const primaryText = userName && userName !== userEmail ? userName : (userEmail || "User")
+				const showSecondary = Boolean(userEmail && userName && userName !== userEmail)
+				return (
+					<div className="flex items-center space-x-3 mb-3">
+						<div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+							<span className="text-sm font-medium text-primary-foreground">
+								{primaryText.charAt(0).toUpperCase()}
+							</span>
+						</div>
+						<div className="flex-1 min-w-0">
+							<p className="text-sm font-medium text-foreground truncate">{primaryText}</p>
+							{showSecondary && (
+								<p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+							)}
+						</div>
+					</div>
+				)
+			})()}
         <form action="/auth/signout" method="post">
           <Button variant="outline" size="sm" className="w-full justify-start bg-transparent" type="submit">
             <LogOut className="mr-2 h-4 w-4" />

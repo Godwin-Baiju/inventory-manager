@@ -14,6 +14,11 @@ export default async function ItemHistoryPage({ params }: { params: Promise<{ id
 
   // Get user info from auth.users
   const user = data.user
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single()
 
   // Get item details
   const { data: item } = await supabase.from("inventory_items").select("*").eq("id", id).single()
@@ -30,7 +35,7 @@ export default async function ItemHistoryPage({ params }: { params: Promise<{ id
     .order("created_at", { ascending: false })
 
   return (
-    <DashboardLayout userEmail={data.user.email!} userName={user.user_metadata?.full_name || user.email}>
+    <DashboardLayout userEmail={data.user.email!} userName={profile?.full_name || user.user_metadata?.full_name || user.email}>
       <div className="p-6">
         <ItemHistoryView item={item} transactions={transactions || []} />
       </div>

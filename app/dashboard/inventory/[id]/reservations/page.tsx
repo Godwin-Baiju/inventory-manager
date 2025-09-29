@@ -18,6 +18,11 @@ export default async function ItemReservationsPage({
 
   // Get user info from auth.users
   const user = data.user
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single()
 
   // Get the inventory item details
   const { data: item, error: itemError } = await supabase
@@ -31,7 +36,7 @@ export default async function ItemReservationsPage({
   }
 
   return (
-    <DashboardLayout userEmail={data.user.email!} userName={user.user_metadata?.full_name || user.email}>
+    <DashboardLayout userEmail={data.user.email!} userName={profile?.full_name || user.user_metadata?.full_name || user.email}>
       <div className="p-6">
         <ItemReservationsView item={item} />
       </div>

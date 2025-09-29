@@ -256,7 +256,7 @@ export function ItemReservationsView({ item }: ItemReservationsViewProps) {
                       <TableCell className="font-medium">{reservation.reserved_quantity}</TableCell>
                       <TableCell>
                         <div>
-                          {new Date(reservation.reserved_until).toLocaleDateString()}
+                          {new Date(reservation.reserved_until).toLocaleDateString('en-US')}
                           {(() => {
                             const reservedDate = new Date(reservation.reserved_until)
                             const today = new Date()
@@ -270,7 +270,7 @@ export function ItemReservationsView({ item }: ItemReservationsViewProps) {
                       </TableCell>
                       <TableCell>{getStatusBadge(reservation.status)}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(reservation.created_at).toLocaleDateString()}
+                        {new Date(reservation.created_at).toLocaleDateString('en-US')}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {reservation.user_name || "Unknown"}

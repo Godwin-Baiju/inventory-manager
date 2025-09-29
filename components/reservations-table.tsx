@@ -245,14 +245,14 @@ export function ReservationsTable({
                       <TableCell className="font-medium">{reservation.reserved_quantity}</TableCell>
                       <TableCell>
                         {reservation.created_at 
-                          ? new Date(reservation.created_at).toLocaleDateString()
+                          ? new Date(reservation.created_at).toLocaleDateString('en-US')
                           : 'N/A'
                         }
                       </TableCell>
                       <TableCell>
                         <div>
                           {reservation.reserved_until 
-                            ? new Date(reservation.reserved_until).toLocaleDateString()
+                            ? new Date(reservation.reserved_until).toLocaleDateString('en-US')
                             : 'N/A'
                           }
                           {reservation.reserved_until && (() => {

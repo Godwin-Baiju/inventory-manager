@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { History, TrendingUp, TrendingDown, Search, Filter, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react"
+import { History, TrendingUp, TrendingDown, Search, Filter, ChevronLeft, ChevronRight, Download, FileDown, Loader2 } from "lucide-react"
 import { getAllFilteredTransactions } from "@/lib/actions/inventory"
 import jsPDF from "jspdf"
 
@@ -63,6 +63,7 @@ export function HistoryTable({
   const [localCurrentPage, setLocalCurrentPage] = useState(1)
   const [isFilterLoading, setIsFilterLoading] = useState(false)
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
+  const [isDownloadingCSV, setIsDownloadingCSV] = useState(false)
 
   const handleDownloadPDF = async () => {
     setIsDownloadingPDF(true)
@@ -417,6 +418,67 @@ export function HistoryTable({
                   <>
                     <Download className="mr-2 h-4 w-4" />
                     Download PDF
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" size="sm" onClick={async () => {
+                setIsDownloadingCSV(true)
+                try {
+                  const { transactions: allFilteredTransactions, error } = await getAllFilteredTransactions({
+                    type: filters.type && filters.type !== 'all' ? filters.type : undefined,
+                    search: searchTerm
+                  })
+                  if (error) {
+                    console.error('Error fetching transactions for CSV:', error)
+                    return
+                  }
+                  const headers = ['Date', 'Time', 'Item', 'Type', 'Quantity', 'Previous Stock', 'New Stock', 'User', 'Reason']
+                  const rows = allFilteredTransactions.map((t) => {
+                    const dateObj = new Date(t.created_at)
+                    const date = dateObj.toLocaleDateString('en-US')
+                    const time = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                    return [
+                      date,
+                      time,
+                      `${t.inventory_items.item_name}`,
+                      t.transaction_type === 'in' ? 'Stock In' : 'Stock Out',
+                      String(t.quantity),
+                      String(t.previous_stock),
+                      String(t.new_stock),
+                      t.user_name || 'Unknown',
+                      t.reason ? t.reason.replace(/\n/g, ' ') : '-'
+                    ]
+                  })
+                  const csv = [headers, ...rows]
+                    .map(row => row.map(cell => {
+                      const needsQuotes = /[",\n]/.test(cell)
+                      const escaped = cell.replace(/"/g, '""')
+                      return needsQuotes ? `"${escaped}"` : escaped
+                    }).join(','))
+                    .join('\n')
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+                  a.download = `transaction-history-${timestamp}.csv`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                } catch (e) {
+                  console.error('Error generating CSV:', e)
+                } finally {
+                  setIsDownloadingCSV(false)
+                }
+              }} disabled={isDownloadingCSV}>
+                {isDownloadingCSV ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating CSV...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Download CSV
                   </>
                 )}
               </Button>

@@ -2,9 +2,6 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { ReservationsTable } from "@/components/reservations-table"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
-import Link from "next/link"
 
 export default async function ReservationsPage({
   searchParams,
@@ -19,8 +16,13 @@ export default async function ReservationsPage({
     redirect("/auth/login")
   }
 
-  // Get user info from auth.users
+  // Get user info from auth.users and profiles
   const user = data.user
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single()
 
 
   // Pagination
@@ -76,19 +78,11 @@ export default async function ReservationsPage({
     const totalPages = Math.ceil((fallbackCount || 0) / itemsPerPage)
 
     return (
-      <DashboardLayout userEmail={data.user.email!} userName={user.user_metadata?.full_name || user.email}>
+      <DashboardLayout userEmail={data.user.email!} userName={profile?.full_name || user.user_metadata?.full_name || user.email}>
         <div className="p-6">
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Stock Reservations</h1>
-              <p className="text-muted-foreground">Manage reserved stock for parties</p>
-            </div>
-            <Link href="/dashboard/reservations/add">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Reservation
-              </Button>
-            </Link>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground">Stock Reservations</h1>
+            <p className="text-muted-foreground">Manage reserved stock for parties</p>
           </div>
           <ReservationsTable
             reservations={fallbackReservations || []}
@@ -115,19 +109,11 @@ export default async function ReservationsPage({
   const totalPages = Math.ceil((finalCount || 0) / itemsPerPage)
 
   return (
-    <DashboardLayout userEmail={data.user.email!} userName={user.user_metadata?.full_name || user.email}>
+    <DashboardLayout userEmail={data.user.email!} userName={profile?.full_name || user.user_metadata?.full_name || user.email}>
       <div className="p-6">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Stock Reservations</h1>
-            <p className="text-muted-foreground">Manage reserved stock for parties</p>
-          </div>
-          <Link href="/dashboard/reservations/add">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Reservation
-            </Button>
-          </Link>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Stock Reservations</h1>
+          <p className="text-muted-foreground">Manage reserved stock for parties</p>
         </div>
         <ReservationsTable
           reservations={finalReservations || []}

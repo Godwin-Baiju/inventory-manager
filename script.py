@@ -8,7 +8,7 @@ def generate_sql_queries(n=10):
     queries = []
     
     # Fixed UUID for created_by / updated_by
-    fixed_user_id = "fdbb81a9-e4e7-4794-ab8b-983829f266b1"
+    fixed_user_id = "ebaba906-671a-4dda-8ce7-676171a692dd"
     
     for _ in range(n):
         item_id = str(uuid.uuid4())
@@ -37,7 +37,7 @@ def generate_sql_queries(n=10):
 
 
 if __name__ == "__main__":
-    n = 10000  # change this number to however many queries you need
+    n = 1000  # change this number to however many queries you need
     sql_queries = generate_sql_queries(n)
     for q in sql_queries:
         print(q, "\n")

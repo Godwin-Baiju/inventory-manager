@@ -21,8 +21,13 @@ export default async function InventoryPage({
 
   console.log("[v0] Fetching inventory for user:", data.user.id)
 
-  // Get user info from auth.users
+  // Get user info from auth.users and profiles
   const user = data.user
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single()
 
   console.log("[v0] User:", user.email)
 
@@ -117,7 +122,7 @@ export default async function InventoryPage({
   const totalPages = Math.ceil((count || 0) / itemsPerPage)
 
   return (
-    <DashboardLayout userEmail={data.user.email!} userName={user.user_metadata?.full_name || user.email}>
+    <DashboardLayout userEmail={data.user.email!} userName={profile?.full_name || user.user_metadata?.full_name || user.email}>
       <div className="p-6">
         <div className="flex justify-between items-center mb-8">
           <div>

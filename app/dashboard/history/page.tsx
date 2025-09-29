@@ -16,8 +16,13 @@ export default async function HistoryPage({
     redirect("/auth/login")
   }
 
-  // Get user info from auth.users
+  // Get user info from auth.users and profiles
   const user = data.user
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single()
 
 
   console.log("[v0] Fetching transactions...")
@@ -132,7 +137,7 @@ export default async function HistoryPage({
   // No server-side pagination needed
 
   return (
-    <DashboardLayout userEmail={data.user.email!} userName={user.user_metadata?.full_name || user.email}>
+    <DashboardLayout userEmail={data.user.email!} userName={profile?.full_name || user.user_metadata?.full_name || user.email}>
       <div className="p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Transaction History</h1>

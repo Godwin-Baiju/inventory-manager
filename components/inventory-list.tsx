@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { AlertTriangle, History, Download, ChevronLeft, ChevronRight, Calendar, CalendarPlus, PackageSearch, Loader2 } from "lucide-react"
+import { AlertTriangle, History, Download, FileDown, ChevronLeft, ChevronRight, Calendar, CalendarPlus, PackageSearch, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { DeleteItemButton } from "@/components/delete-item-button"
 import { InventorySearch } from "@/components/inventory-search"
@@ -49,6 +49,7 @@ export function InventoryList({
   const [filteredItems, setFilteredItems] = useState(items)
   const [localSearchTerm, setLocalSearchTerm] = useState(searchQuery || "")
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
+  const [isDownloadingCSV, setIsDownloadingCSV] = useState(false)
 
   useEffect(() => {
     setFilteredItems(items)
@@ -369,19 +370,82 @@ export function InventoryList({
                   : `Complete list of your inventory items (${totalCount} total)`}
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
-              {isDownloadingPDF ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating PDF...
-                </>
-              ) : (
-                <>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PDF
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
+                {isDownloadingPDF ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PDF
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" size="sm" onClick={async () => {
+                setIsDownloadingCSV(true)
+                try {
+                  const { inventoryItems: allFilteredItems, error } = await getAllFilteredInventoryItems(searchQuery)
+                  if (error) {
+                    console.error("Error fetching inventory items for CSV:", error)
+                    alert("Error fetching data for CSV generation")
+                    return
+                  }
+                  const headers = [
+                    'Item Name','Brand','Size','Total Stock','Reserved','Available','Remark','Last Updated','Updated By'
+                  ]
+                  const rows = allFilteredItems.map((item) => {
+                    const reserved = item.reserved_quantity || 0
+                    const available = item.stock_qty - reserved
+                    return [
+                      item.item_name,
+                      item.item_brand,
+                      item.size,
+                      String(item.stock_qty),
+                      String(reserved),
+                      String(available),
+                      item.remark ? item.remark.replace(/\n/g, ' ') : '-',
+                      new Date(item.updated_at).toLocaleDateString('en-US'),
+                      item.updater_name || 'Unknown'
+                    ]
+                  })
+                  const csv = [headers, ...rows]
+                    .map((row) => row.map((cell) => {
+                      const needsQuotes = /[",\n]/.test(cell)
+                      const escaped = cell.replace(/"/g, '""')
+                      return needsQuotes ? `"${escaped}"` : escaped
+                    }).join(","))
+                    .join("\n")
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                  const url = URL.createObjectURL(blob)
+                  const link = document.createElement('a')
+                  link.href = url
+                  const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+                  link.download = `inventory-list-${timestamp}.csv`
+                  link.click()
+                  URL.revokeObjectURL(url)
+                } catch (err: any) {
+                  console.error('Error generating CSV:', err)
+                  alert('Error generating CSV')
+                } finally {
+                  setIsDownloadingCSV(false)
+                }
+              }} disabled={isDownloadingCSV}>
+                {isDownloadingCSV ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating CSV...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Download CSV
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
           <InventorySearch 
             items={items} 
