@@ -8,6 +8,14 @@ export const metadata: Metadata = {
   title: 'Inventory Manager',
   description: 'Created for Our Own Marbles',
   generator: 'Godwin Baiju',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    apple: [{ url: '/icon.png' }],
+  },
+  manifest: '/manifest.webmanifest',
 }
 
 export default function RootLayout({
